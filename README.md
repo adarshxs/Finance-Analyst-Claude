@@ -1,4 +1,4 @@
-# Finance-Analyst-OpenAI
+# Finance-Analyst-Claude
 AI-Powered Financial Data Analysis Tool with Interactive Visualization
 
 This project is intended for my Software Engineering Lab course. Kindly ignore any activity.
