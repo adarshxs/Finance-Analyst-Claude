@@ -1,6 +1,6 @@
 # Claude Financial Data Analyst
 
-![hero](public/hero.png)
+![image](https://github.com/user-attachments/assets/0303ea81-c0bf-40be-8ca2-e04137f2bb63)
 
 A sophisticated Next.js application that combines Claude's capabilities with interactive data visualization to analyze financial data via chat.
 
@@ -116,5 +116,6 @@ While primarily designed for financial analysis, the AI assistant can be adapted
 
 You can even use charts and images to create interesting results, like the ability to see what's most common inside a picture using a pie chart.
 
-![Image Analysis](public/image-analysis.png)
+![image](https://github.com/user-attachments/assets/21ee16d4-e309-4db1-8f24-9f713ed39801)
+
 
