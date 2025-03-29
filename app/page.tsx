@@ -31,7 +31,7 @@ export default function LandingPage() {
             with only the Google option.
             redirectUrl specifies where to go *after* successful sign-in.
           */}
-          <SignInButton mode="modal" redirectUrl="/finance">
+          <SignInButton mode="modal">
             <Button size="lg" className="gap-2">
               Sign in with Google
               <ArrowRight className="h-5 w-5" />

@@ -3,7 +3,6 @@
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { type ToastProps } from "@/components/ui/toast";
 import {
   Card,
   CardContent,
@@ -13,6 +12,7 @@ import {
   CardFooter,
 } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+// Remove unused import: import { type ToastProps } from "@/components/ui/toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Send,
@@ -20,13 +20,14 @@ import {
   Paperclip,
   ChartLine,
   ChartArea,
-  FileInput,
+  // Removed unused: FileInput,
   MessageCircleQuestion,
   ChartColumnBig,
 } from "lucide-react";
 import FilePreview from "@/components/FilePreview";
 import { ChartRenderer } from "@/components/ChartRenderer";
-import { toast } from "@/hooks/use-toast";
+import { useToast, toast } from "@/hooks/use-toast"; // Import useToast as well if needed elsewhere, keep toast
+import { type ToasterToast } from "@/hooks/use-toast"; // *** FIX: Import ToasterToast type ***
 import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
@@ -35,14 +36,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { ChartData } from "@/types/chart";
-// Note: TopNavBar is removed from here as it's now in the root layout
 import {
   readFileAsText,
   readFileAsBase64,
   readFileAsPDFText,
 } from "@/utils/fileHandling";
 
-// Types (keep existing)
+// Types
 interface Message {
   id: string;
   role: string;
@@ -75,7 +75,7 @@ const models: Model[] = [
   { id: "claude-3-5-sonnet-20240620", name: "Claude 3.5 Sonnet" },
 ];
 
-// Updated APIResponse interface (keep existing)
+// Updated APIResponse interface
 interface APIResponse {
   content: string;
   hasToolUse: boolean;
@@ -92,7 +92,7 @@ interface MessageComponentProps {
   message: Message;
 }
 
-// SafeChartRenderer (keep existing)
+// SafeChartRenderer
 const SafeChartRenderer: React.FC<{ data: ChartData }> = ({ data }) => {
   try {
     return (
@@ -112,13 +112,12 @@ const SafeChartRenderer: React.FC<{ data: ChartData }> = ({ data }) => {
   }
 };
 
-// MessageComponent (keep existing)
+// MessageComponent
 const MessageComponent: React.FC<MessageComponentProps> = ({ message }) => {
-  // console.log("Rendering message:", message.id, "Has chart:", !!message.chartData);
   return (
-    <div className="flex items-start gap-3 w-full"> {/* Use gap-3 for slightly more space */}
+    <div className="flex items-start gap-3 w-full">
       {message.role === "assistant" && (
-        <Avatar className="w-8 h-8 border shrink-0"> {/* Added shrink-0 */}
+        <Avatar className="w-8 h-8 border shrink-0">
           <AvatarImage src="/ant-logo.svg" alt="AI Assistant Avatar" />
           <AvatarFallback>AI</AvatarFallback>
         </Avatar>
@@ -128,12 +127,12 @@ const MessageComponent: React.FC<MessageComponentProps> = ({ message }) => {
       )}
 
       <div
-        className={`flex flex-col max-w-[80%] ${ // Allow slightly wider messages
-          message.role === "user" ? "items-end" : "items-start" // Align content within the bubble
+        className={`flex flex-col max-w-[80%] ${
+          message.role === "user" ? "items-end" : "items-start"
         }`}
       >
         <div
-          className={`p-3 rounded-lg text-sm shadow-sm ${ // Use shadow-sm, adjust text size
+          className={`p-3 rounded-lg text-sm shadow-sm ${
             message.role === "user"
               ? "bg-primary text-primary-foreground"
               : "bg-muted border"
@@ -149,19 +148,16 @@ const MessageComponent: React.FC<MessageComponentProps> = ({ message }) => {
               )}
             </div>
           ) : (
-            // Render message content with potential tool use badge
             <div className="flex flex-col gap-1">
               {message.hasToolUse && message.role === 'assistant' && (
                 <Badge variant="secondary" className="inline-flex self-start text-xs px-2 py-0.5">
                   <ChartLine className="w-3 h-3 mr-1" /> Generated Chart
                 </Badge>
               )}
-              {/* Use whitespace-pre-wrap to respect newlines from the AI */}
               <span className="whitespace-pre-wrap break-words">{message.content}</span>
             </div>
           )}
         </div>
-        {/* Render file preview below the message bubble */}
         {message.file && (
           <div className={`mt-1.5 ${message.role === "user" ? "self-end" : "self-start"}`}>
             <FilePreview file={message.file} size="small" />
@@ -172,8 +168,7 @@ const MessageComponent: React.FC<MessageComponentProps> = ({ message }) => {
         <div className="flex-grow"></div> /* Spacer for assistant messages */
       )}
        {message.role === "user" && (
-         <Avatar className="w-8 h-8 border shrink-0"> {/* Added shrink-0 */}
-           {/* Consider using Clerk's user prop here if available */}
+         <Avatar className="w-8 h-8 border shrink-0">
            {/* <AvatarImage src={user?.imageUrl} /> */}
            <AvatarFallback>U</AvatarFallback>
          </Avatar>
@@ -183,7 +178,7 @@ const MessageComponent: React.FC<MessageComponentProps> = ({ message }) => {
 };
 
 
-// ChartPagination (keep existing)
+// ChartPagination
 const ChartPagination = ({
   total,
   current,
@@ -193,7 +188,6 @@ const ChartPagination = ({
   current: number;
   onDotClick: (index: number) => void;
 }) => (
-  // Position fixed relative to the chart container might be better
   <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col gap-2 z-10">
     {Array.from({ length: total }).map((_, i) => (
       <button
@@ -219,8 +213,8 @@ export default function AIChat() {
   const [selectedModel, setSelectedModel] = useState(
     models[1].id // Default to Sonnet 3.5
   );
-  const messagesContainerRef = useRef<HTMLDivElement>(null); // Ref for the messages container
-  const chartContainerRef = useRef<HTMLDivElement>(null); // Ref for the chart container
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const chartContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [currentUpload, setCurrentUpload] = useState<FileUpload | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -230,90 +224,87 @@ export default function AIChat() {
   useEffect(() => {
     const container = messagesContainerRef.current;
     if (container) {
-      // Scroll down when messages change or loading starts/stops
       requestAnimationFrame(() => {
         container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
       });
     }
-  }, [messages, isLoading]); // Trigger on messages change and loading state
+  }, [messages, isLoading]);
 
-  // Debounced scroll handler for charts
+  // Debounced scroll handler for charts (Consider adding actual debouncing if performance becomes an issue)
   const handleChartScroll = useCallback(() => {
     const container = chartContainerRef.current;
     if (!container) return;
 
     const { scrollTop, clientHeight } = container;
-    // Calculate index based on center of the viewport
     const newIndex = Math.round((scrollTop + clientHeight / 2) / clientHeight);
-    // Ensure index is within bounds
     const chartMessages = messages.filter(m => m.chartData);
     const boundedIndex = Math.max(0, Math.min(newIndex, chartMessages.length - 1));
 
     if (boundedIndex !== currentChartIndex) {
-       // console.log(`Chart index changed to: ${boundedIndex}`);
        setCurrentChartIndex(boundedIndex);
     }
   }, [messages, currentChartIndex]); // Dependencies
 
-  // Scroll to a specific chart index
-  const scrollToChart = (index: number) => {
+  // *** FIX: Wrap scrollToChart in useCallback and add dependencies ***
+  const scrollToChart = useCallback((index: number) => {
     const container = chartContainerRef.current;
     if (!container) return;
 
-    const chartMessages = messages.filter(m => m.chartData);
+    const chartMessages = messages.filter(m => m.chartData); // Depends on messages
     if (index >= 0 && index < chartMessages.length) {
-      const targetScroll = index * container.clientHeight; // Assumes each chart takes full height
+      const targetScroll = index * container.clientHeight;
       container.scrollTo({
         top: targetScroll,
         behavior: "smooth",
       });
-      // setCurrentChartIndex(index); // Update index immediately for pagination UI
+      // Setting index here might conflict with scroll handler, let scroll handler manage it mostly
+      // setCurrentChartIndex(index);
     }
-  };
+  }, [messages]); // Dependency: messages
 
   // Scroll to the newest chart when a new one is added
   useEffect(() => {
     const chartMessages = messages.filter((m) => m.chartData);
     const lastChartIndex = chartMessages.length - 1;
 
-    // Check if the last message added was a chart
     if (messages.length > 0 && messages[messages.length - 1].chartData && lastChartIndex >= 0) {
-        // console.log("New chart added, scrolling to index:", lastChartIndex);
-        // Use timeout to allow DOM update before scrolling
         const timer = setTimeout(() => scrollToChart(lastChartIndex), 150);
         return () => clearTimeout(timer);
     }
-  }, [messages]); // Dependency on messages array
+  // *** FIX: Add memoized scrollToChart to dependency array ***
+  }, [messages, scrollToChart]);
 
- // --- File Handling (keep existing) ---
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+ // --- File Handling ---
+
+ // *** FIX: Define interface matching the return type of toast() ***
+ interface ToastControl {
+   id: string;
+   dismiss: () => void;
+   update: (props: ToasterToast) => void; // Expects full ToasterToast now
+ }
+
+ const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
      const file = e.target.files?.[0];
     if (!file) return;
 
     setIsUploading(true);
-    // Define interface for clarity (can be placed outside function)
-    interface ToastControl {
-      id: string;
-      dismiss: () => void;
-      update: (props: Partial<ToastProps & { title?: React.ReactNode; description?: React.ReactNode }>) => void;
-    }
-    // Store the whole control object
-    let loadingToastControl: ToastControl | undefined; // Use string for toast ID
+
+    // *** FIX: Use the corrected ToastControl interface type ***
+    let loadingToastControl: ToastControl | undefined;
 
     // Show processing toast immediately
-    // Store the returned control object
-    loadingToastControl = toast({
+    loadingToastControl = toast({ // *** This assignment (line ~305) should now pass type checking ***
       title: "Processing File",
       description: `Working on ${file.name}...`,
       duration: 999999, // Indefinite duration
-    }); // Get the ID
+    });
 
     try {
       const isImage = file.type.startsWith("image/");
       const isPDF = file.type === "application/pdf";
       let base64Data = "";
       let isText = false;
-      let fileContentDescription = ""; // For success message
+      let fileContentDescription = "";
 
       if (isImage) {
         base64Data = await readFileAsBase64(file);
@@ -321,27 +312,24 @@ export default function AIChat() {
         fileContentDescription = "Image data loaded";
       } else if (isPDF) {
          try {
-           // Update toast for PDF parsing
            if (loadingToastControl) {
-              loadingToastControl.update({ // Use the update method
-                  // No need to pass ID here, update knows its target
+              // *** FIX: Use type assertion for partial update object ***
+              loadingToastControl.update({
                   title: "Parsing PDF",
                   description: "Extracting text content..."
-              });
+              } as ToasterToast); // Assert type here
            }
            const pdfText = await readFileAsPDFText(file);
-           base64Data = btoa(unescape(encodeURIComponent(pdfText))); // Use unescape for broader compatibility
+           base64Data = btoa(unescape(encodeURIComponent(pdfText)));
            isText = true;
            fileContentDescription = "PDF text extracted";
          } catch (error) {
            console.error("Failed to parse PDF:", error);
-           throw new Error("Unable to extract text from the PDF. It might be image-based or corrupted."); // Throw specific error
+           throw new Error("Unable to extract text from the PDF. It might be image-based or corrupted.");
          }
       } else {
-         // Try reading as text for common types like CSV, TXT, MD, etc.
          try {
            const textContent = await readFileAsText(file);
-           // Basic check if it looks like binary data (might need refinement)
            if (textContent.includes('\uFFFD') && !file.type.startsWith('text/')) {
               throw new Error("File seems to be binary, not text-based.");
            }
@@ -354,7 +342,6 @@ export default function AIChat() {
          }
       }
 
-      // Check file size (example: limit to 10MB)
       const maxSize = 10 * 1024 * 1024; // 10 MB
       if (file.size > maxSize) {
           throw new Error(`File size exceeds the limit of ${maxSize / (1024*1024)}MB.`);
@@ -363,57 +350,55 @@ export default function AIChat() {
       setCurrentUpload({
         base64: base64Data,
         fileName: file.name,
-        mediaType: isText ? "text/plain" : file.type, // Use text/plain for consistency
+        mediaType: isText ? "text/plain" : file.type,
         isText,
         fileSize: file.size
       });
 
-      // Update toast to success
       if (loadingToastControl) {
+        // *** FIX: Use type assertion for partial update object ***
         loadingToastControl.update({
-           // No need for id here
            title: "File Ready",
            description: `${file.name} (${fileContentDescription}). Add prompt.`,
            variant: "default",
            duration: 5000
-        });
-        loadingToastControl = undefined; // Clear control after final update
-    } // Clear the ID
+        } as ToasterToast); // Assert type here
+        loadingToastControl = undefined; // *** FIX: Clear control after final update ***
+      }
 
     } catch (error) {
       console.error("Error processing file:", error);
       const errorMessage = error instanceof Error ? error.message : "Failed to process the file";
-      // Update toast to error or show new error toast
+
       if (loadingToastControl) {
+          // *** FIX: Use type assertion for partial update object ***
           loadingToastControl.update({
-              // No need for id here
               title: "Upload Failed",
               description: errorMessage,
               variant: "destructive",
               duration: 8000
-          });
-          loadingToastControl = undefined; // Clear control after error update
+          } as ToasterToast); // Assert type here
+          loadingToastControl = undefined; // *** FIX: Clear control after error update ***
       } else {
-          // Fallback if initial toast failed
           toast({ title: "Upload Failed", description: errorMessage, variant: "destructive", duration: 8000 });
       }
-      setCurrentUpload(null); // Clear upload state on error
+      setCurrentUpload(null);
     } finally {
       setIsUploading(false);
-      // Clear the file input value so the same file can be selected again
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
-       // Dismiss any lingering loading toast if something went wrong before update
-       if (loadingToastId) {
-           toast({ dismiss: true, id: loadingToastId });
-       }
+       // *** FIX: Removed faulty reference to loadingToastId ***
+       // Optional: Dismiss if control still exists (unexpected error before update)?
+       // if (loadingToastControl) {
+       //   loadingToastControl.dismiss();
+       // }
     }
   };
 
- // --- Form Submission (keep existing core logic) ---
+ // --- Form Submission ---
   const handleSubmit = async (event?: React.FormEvent<HTMLFormElement>) => {
-    event?.preventDefault(); // Prevent default form submission if called from form
+    event?.preventDefault();
     if (!input.trim() && !currentUpload) {
         toast({ title: "Input required", description: "Please type a message or upload a file.", variant: "destructive"});
         return;
@@ -422,51 +407,41 @@ export default function AIChat() {
 
     setIsLoading(true);
 
-    // Construct user message immediately
     const userMessage: Message = {
       id: crypto.randomUUID(),
       role: "user",
-      content: input.trim(), // Trim whitespace from input
+      content: input.trim(),
       file: currentUpload || undefined,
     };
 
-     // Construct thinking message based on whether a file is included
     const thinkingContent = currentUpload ? `Analyzing ${currentUpload.fileName}...` : "Thinking...";
     const thinkingMessage: Message = {
       id: crypto.randomUUID(),
       role: "assistant",
-      content: "thinking", // Keep internal state as 'thinking'
-      // We don't know if a tool will be used yet
+      content: "thinking",
+      // Display content depends on internal 'thinking' state later
     };
 
-    // Add user message and thinking message to state
     setMessages((prev) => [...prev, userMessage, thinkingMessage]);
 
-    // Clear input and reset upload state *after* adding to messages
     setInput("");
-    setCurrentUpload(null); // File is now part of the userMessage
+    setCurrentUpload(null);
 
-    // Prepare messages for API, excluding the 'thinking' message
-    const messagesForApi = messages.concat(userMessage); // Use the just created user message
+    const messagesForApi = messages.concat(userMessage);
 
     const requestBody = {
-      // Map messages for the API structure
       messages: messagesForApi.map(msg => ({
           role: msg.role,
-          content: msg.content, // Send only content for regular messages
-          // File data is handled separately below for the *last* user message
+          content: msg.content,
       })),
-      // Add file data if the *last submitted* message had a file
       fileData: userMessage.file ? {
            base64: userMessage.file.base64,
            mediaType: userMessage.file.mediaType,
            isText: userMessage.file.isText,
-           fileName: userMessage.file.fileName, // Send filename too
+           fileName: userMessage.file.fileName,
       } : null,
       model: selectedModel,
     };
-
-    // console.log("Sending to API:", JSON.stringify(requestBody, null, 2));
 
     try {
       const response = await fetch("/api/finance", {
@@ -476,12 +451,10 @@ export default function AIChat() {
       });
 
       if (!response.ok) {
-        // Try to parse error response from API
         let errorData;
         try {
             errorData = await response.json();
         } catch (parseError) {
-            // If response is not JSON or empty
             errorData = { error: "API Error", details: `Request failed with status: ${response.status} ${response.statusText}` };
         }
         console.error("API Error Response:", errorData);
@@ -489,22 +462,19 @@ export default function AIChat() {
       }
 
       const data: APIResponse = await response.json();
-      // console.log("Received from API:", data);
 
-      // Update the 'thinking' message with the actual response
       setMessages((prev) => {
         const newMessages = [...prev];
         const thinkingIndex = newMessages.findIndex(m => m.content === 'thinking' && m.role === 'assistant');
         if (thinkingIndex !== -1) {
            newMessages[thinkingIndex] = {
-             id: newMessages[thinkingIndex].id, // Keep the same ID for stability
+             id: newMessages[thinkingIndex].id,
              role: "assistant",
-             content: data.content || (data.hasToolUse ? "Generated a chart based on your request." : "I received an empty response."), // Provide fallback content
+             content: data.content || (data.hasToolUse ? "Generated a chart based on your request." : "I received an empty response."),
              hasToolUse: data.hasToolUse || !!data.toolUse,
-             chartData: data.chartData || (data.toolUse?.input), // Use chartData if present, fallback to toolUse.input
+             chartData: data.chartData || (data.toolUse?.input),
            };
         } else {
-            // Should not happen, but handle gracefully if thinking message wasn't found
              newMessages.push({
                id: crypto.randomUUID(),
                role: "assistant",
@@ -519,7 +489,6 @@ export default function AIChat() {
     } catch (error) {
       console.error("Submit Error:", error);
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-      // Update the 'thinking' message to show the error
       setMessages((prev) => {
         const newMessages = [...prev];
          const thinkingIndex = newMessages.findIndex(m => m.content === 'thinking' && m.role === 'assistant');
@@ -538,7 +507,6 @@ export default function AIChat() {
          }
         return newMessages;
       });
-      // Show error toast
        toast({
            title: "Request Failed",
            description: errorMessage,
@@ -549,42 +517,38 @@ export default function AIChat() {
     }
   };
 
-  // Handle Enter key press in textarea (keep existing)
+  // Handle Enter key press in textarea
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey && !isLoading) {
-      e.preventDefault(); // Prevent newline
-      handleSubmit(); // Trigger submit
+      e.preventDefault();
+      handleSubmit();
     }
   };
 
-  // Handle textarea resizing (keep existing)
+  // Handle textarea resizing
   const handleInputChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
     const textarea = event.target;
     setInput(textarea.value);
-    textarea.style.height = "auto"; // Reset height
-    // Set height based on scroll height, capped at a max (e.g., 200px)
+    textarea.style.height = "auto";
     textarea.style.height = `${Math.min(textarea.scrollHeight, 200)}px`;
   };
 
   const chartMessages = messages.filter(m => m.chartData);
 
   return (
-    // Main container div - remove TopNavBar here
-    // Use grid for layout instead of flex
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 p-4 h-[calc(100vh-3.5rem)] overflow-hidden"> {/* h-screen minus header height */}
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 p-4 h-[calc(100vh-3.5rem)] overflow-hidden">
 
         {/* Chat Sidebar (Column 1) */}
-        <Card className="lg:col-span-1 flex flex-col h-full overflow-hidden"> {/* Takes 1 col on large screens */}
-           <CardHeader className="py-3 px-4 border-b"> {/* Added border */}
+        <Card className="lg:col-span-1 flex flex-col h-full overflow-hidden">
+           <CardHeader className="py-3 px-4 border-b">
              <div className="flex items-center justify-between">
-                {/* Left side: Title and Model Selector */}
                 <div className="flex items-center gap-3">
                     <Avatar className="w-8 h-8 border">
                         <AvatarImage src="/ant-logo.svg" alt="AI Assistant Avatar" />
                         <AvatarFallback>AI</AvatarFallback>
                     </Avatar>
                     <div>
-                        <CardTitle className="text-base font-semibold"> {/* Adjusted size */}
+                        <CardTitle className="text-base font-semibold">
                            Financial Assistant
                         </CardTitle>
                         <CardDescription className="text-xs">
@@ -592,11 +556,9 @@ export default function AIChat() {
                         </CardDescription>
                     </div>
                 </div>
-
-                {/* Right side: Model Dropdown */}
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-8 text-xs px-2 gap-1"> {/* Adjusted size/padding */}
+                    <Button variant="outline" size="sm" className="h-8 text-xs px-2 gap-1">
                         {models.find((m) => m.id === selectedModel)?.name || 'Select Model'}
                         <ChevronDown className="ml-1 h-4 w-4 opacity-70" />
                     </Button>
@@ -606,7 +568,7 @@ export default function AIChat() {
                         <DropdownMenuItem
                            key={model.id}
                            onSelect={() => setSelectedModel(model.id)}
-                           className="text-xs" // Smaller font in dropdown
+                           className="text-xs"
                         >
                         {model.name}
                         </DropdownMenuItem>
@@ -618,11 +580,10 @@ export default function AIChat() {
 
             {/* Message List */}
            <CardContent
-             ref={messagesContainerRef} // Add ref here
-             className="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth" // Added space-y
+             ref={messagesContainerRef}
+             className="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth"
            >
              {messages.length === 0 ? (
-                // Welcome/Instructions Message
                <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground animate-fade-in-up">
                  <Avatar className="w-10 h-10 mb-4 border">
                    <AvatarImage src="/ant-logo.svg" alt="AI Assistant Avatar" />
@@ -644,67 +605,58 @@ export default function AIChat() {
                  </div>
                </div>
              ) : (
-                // Render actual messages
                messages.map((message) => (
                  <div
                    key={message.id}
-                   className={`animate-fade-in-up ${ // Apply animation
-                     message.content === "thinking" ? "opacity-70" : "" // Dim thinking message slightly
+                   className={`animate-fade-in-up ${
+                     message.content === "thinking" ? "opacity-70" : ""
                    }`}
                  >
                    <MessageComponent message={message} />
                  </div>
                ))
              )}
-              {/* No need for messagesEndRef div if using scrollIntoView on container */}
            </CardContent>
 
             {/* Input Area */}
-           <CardFooter className="p-3 border-t bg-background"> {/* Ensure background matches */}
+           <CardFooter className="p-3 border-t bg-background">
              <form onSubmit={handleSubmit} className="w-full flex flex-col gap-2">
-               {/* File Preview Area */}
                 {currentUpload && (
                   <div className="flex items-center justify-between p-2 border rounded-md bg-muted/50">
                     <FilePreview
                         file={currentUpload}
-                        size="small" // Use small preview here
+                        size="small"
                      />
                       <span className="text-xs text-muted-foreground truncate mx-2 flex-1">{currentUpload.fileName}</span>
-                      {/* Keep the remove button if FilePreview doesn't have it */}
-                      {/* <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setCurrentUpload(null)}> <X className="h-4 w-4" /></Button> */}
                   </div>
                  )}
-                {/* Text Input and Buttons */}
                <div className="flex items-end space-x-2">
-                 {/* File Upload Button */}
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="h-9 w-9 shrink-0" // Match textarea height, prevent shrinking
+                    className="h-9 w-9 shrink-0"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={isLoading || isUploading}
                     aria-label="Attach file"
                   >
                    {isUploading ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" /> : <Paperclip className="h-5 w-5" />}
                   </Button>
-                  {/* Textarea */}
                   <Textarea
-                    ref={input => input && (input.style.height = 'auto', input.style.height = `${Math.min(input.scrollHeight, 200)}px`)} // Inline ref for resize on mount/change
+                    ref={input => { if (input) { input.style.height = 'auto'; input.style.height = `${Math.min(input.scrollHeight, 200)}px`; } }} // Adjusted ref callback
                     value={input}
                     onChange={handleInputChange}
                     onKeyDown={handleKeyDown}
                     placeholder="Ask about your data or file..."
                     disabled={isLoading}
-                    className="flex-1 resize-none min-h-[40px] max-h-[200px] text-sm py-2 px-3 leading-tight" // Adjusted styling
+                    className="flex-1 resize-none min-h-[40px] max-h-[200px] text-sm py-2 px-3 leading-tight"
                     rows={1}
                     aria-label="Chat message input"
                   />
-                  {/* Send Button */}
                   <Button
                     type="submit"
                     size="icon"
-                    className="h-9 w-9 shrink-0" // Match textarea height, prevent shrinking
+                    className="h-9 w-9 shrink-0"
                     disabled={isLoading || isUploading || (!input.trim() && !currentUpload)}
                     aria-label="Send message"
                   >
@@ -712,21 +664,19 @@ export default function AIChat() {
                   </Button>
                </div>
              </form>
-             {/* Hidden file input element */}
              <input
                 type="file"
                 ref={fileInputRef}
                 className="hidden"
                 onChange={handleFileSelect}
-                accept=".csv,.txt,.md,.json,application/pdf,image/*" // Specify acceptable types
+                accept=".csv,.txt,.md,.json,application/pdf,image/*"
               />
            </CardFooter>
         </Card>
 
-       {/* Content Area (Charts/Analysis) (Column 2 & 3) */}
-        <Card className="lg:col-span-2 flex flex-col h-full overflow-hidden relative"> {/* Takes 2 cols on large, relative for pagination */}
+       {/* Content Area (Charts/Analysis) */}
+        <Card className="lg:col-span-2 flex flex-col h-full overflow-hidden relative">
            {chartMessages.length > 0 ? (
-             // Show Charts
              <>
                <CardHeader className="py-3 px-4 border-b shrink-0">
                  <CardTitle className="text-base font-semibold">Analysis & Visualizations</CardTitle>
@@ -734,31 +684,28 @@ export default function AIChat() {
                </CardHeader>
                <CardContent
                  ref={chartContainerRef}
-                 className="flex-1 overflow-y-auto scroll-smooth snap-y snap-mandatory p-0" // Remove padding, add scroll behavior
-                 onScroll={handleChartScroll} // Attach debounced scroll handler
+                 className="flex-1 overflow-y-auto scroll-smooth snap-y snap-mandatory p-0"
+                 onScroll={handleChartScroll}
                >
-                 {/* Map through messages *with* chartData */}
                  {chartMessages.map((message, index) => (
                      <div
-                       key={`chart-${message.id}`} // Use message ID for key
-                       className="w-full h-full flex-shrink-0 snap-start snap-always flex items-center justify-center p-4" // Ensure full height and center content
+                       key={`chart-${message.id}`}
+                       className="w-full h-full flex-shrink-0 snap-start snap-always flex items-center justify-center p-4"
                      >
-                       <SafeChartRenderer data={message.chartData!} /> {/* Assert non-null chartData */}
+                       <SafeChartRenderer data={message.chartData!} />
                      </div>
                    ),
                  )}
                </CardContent>
-               {/* Pagination Dots (only if more than one chart) */}
                {chartMessages.length > 1 && (
                  <ChartPagination
                    total={chartMessages.length}
                    current={currentChartIndex}
-                   onDotClick={scrollToChart}
+                   onDotClick={scrollToChart} // Use the memoized function
                  />
                )}
              </>
            ) : (
-              // Show Placeholder
              <CardContent className="flex-1 flex flex-col items-center justify-center text-center p-6">
                 <ChartColumnBig className="w-12 h-12 text-muted-foreground mb-4" />
                  <CardTitle className="text-lg font-semibold mb-2">Charts Appear Here</CardTitle>

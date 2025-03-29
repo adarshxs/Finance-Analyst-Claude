@@ -191,4 +191,7 @@ function useToast() {
   }
 }
 
-export { useToast, toast }
+// hooks/use-toast.ts
+// ... (rest of the file) ...
+
+export { useToast, toast, type ToasterToast } // <-- Add 'type ToasterToast' here
