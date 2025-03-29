@@ -290,14 +290,22 @@ export default function AIChat() {
     if (!file) return;
 
     setIsUploading(true);
-    let loadingToastId: string | undefined; // Use string for toast ID
+    // Define interface for clarity (can be placed outside function)
+    interface ToastControl {
+      id: string;
+      dismiss: () => void;
+      update: (props: Partial<ToastProps & { title?: React.ReactNode; description?: React.ReactNode }>) => void;
+    }
+    // Store the whole control object
+    let loadingToastControl: ToastControl | undefined; // Use string for toast ID
 
     // Show processing toast immediately
-    loadingToastId = toast({
-        title: "Processing File",
-        description: `Working on ${file.name}...`,
-        duration: 999999, // Keep indefinitely until dismissed
-    }).id; // Get the ID
+    // Store the returned control object
+    loadingToastControl = toast({
+      title: "Processing File",
+      description: `Working on ${file.name}...`,
+      duration: 999999, // Indefinite duration
+    }); // Get the ID
 
     try {
       const isImage = file.type.startsWith("image/");
@@ -313,7 +321,13 @@ export default function AIChat() {
       } else if (isPDF) {
          try {
            // Update toast for PDF parsing
-           toast({ id: loadingToastId, title: "Parsing PDF", description: "Extracting text content..." });
+           if (loadingToastControl) {
+              loadingToastControl.update({ // Use the update method
+                  // No need to pass ID here, update knows its target
+                  title: "Parsing PDF",
+                  description: "Extracting text content..."
+              });
+           }
            const pdfText = await readFileAsPDFText(file);
            base64Data = btoa(unescape(encodeURIComponent(pdfText))); // Use unescape for broader compatibility
            isText = true;
@@ -354,36 +368,34 @@ export default function AIChat() {
       });
 
       // Update toast to success
-       toast({
-         id: loadingToastId, // Use the saved ID to update
-         title: "File Ready",
-         description: `${file.name} (${fileContentDescription}). Add a prompt and send.`,
-         variant: "default",
-         duration: 5000 // Show for 5 seconds
-       });
-       loadingToastId = undefined; // Clear the ID
+      if (loadingToastControl) {
+        loadingToastControl.update({
+           // No need for id here
+           title: "File Ready",
+           description: `${file.name} (${fileContentDescription}). Add prompt.`,
+           variant: "default",
+           duration: 5000
+        });
+        loadingToastControl = undefined; // Clear control after final update
+    } // Clear the ID
 
     } catch (error) {
       console.error("Error processing file:", error);
       const errorMessage = error instanceof Error ? error.message : "Failed to process the file";
       // Update toast to error or show new error toast
-       if (loadingToastId) {
-           toast({
-               id: loadingToastId, // Update existing toast
-               title: "Upload Failed",
-               description: errorMessage,
-               variant: "destructive",
-               duration: 8000 // Show error longer
-           });
-           loadingToastId = undefined;
-       } else {
-           toast({ // Show new toast if initial one wasn't set or failed early
-               title: "Upload Failed",
-               description: errorMessage,
-               variant: "destructive",
-               duration: 8000
-           });
-       }
+      if (loadingToastControl) {
+          loadingToastControl.update({
+              // No need for id here
+              title: "Upload Failed",
+              description: errorMessage,
+              variant: "destructive",
+              duration: 8000
+          });
+          loadingToastControl = undefined; // Clear control after error update
+      } else {
+          // Fallback if initial toast failed
+          toast({ title: "Upload Failed", description: errorMessage, variant: "destructive", duration: 8000 });
+      }
       setCurrentUpload(null); // Clear upload state on error
     } finally {
       setIsUploading(false);
