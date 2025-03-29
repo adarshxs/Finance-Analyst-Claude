@@ -3,6 +3,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
+import { type ToastProps } from "@/components/ui/toast";
 import {
   Card,
   CardContent,
