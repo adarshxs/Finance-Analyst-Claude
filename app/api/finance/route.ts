@@ -1,7 +1,7 @@
 // app/api/finance/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
-import type { ChartData, ChartConfig } from "@/types/chart"; // Ensure ChartConfig is imported if used
+import Anthropic from "@anthropic-ai/sdk"; // Make sure Anthropic is imported for types
+import type { ChartData, ChartConfig } from "@/types/chart";
 
 // Initialize Anthropic client
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY!, });
@@ -47,8 +47,6 @@ const tools: ToolSchema[] = [
                 percentage: { type: "number" as const },
                 direction: { type: "string" as const, enum: ["up", "down"] as const, },
               },
-              // Trend is optional, don't require it here unless always needed
-              // required: ["percentage", "direction"],
             },
             footer: { type: "string" as const },
             totalLabel: { type: "string" as const },
@@ -99,13 +97,11 @@ export async function POST(req: NextRequest) {
       const { base64, mediaType, isText, fileName } = fileData;
       if (!base64) { return new NextResponse(JSON.stringify({ error: "No file data" }), { status: 400 }); }
       try {
+        const lastUserContent = messages.findLast((m: any) => m.role === 'user')?.content || "";
         if (isText) {
           const textContent = decodeURIComponent(escape(atob(base64)));
-          // Ensure the latest message content is included along with file data
-          const lastUserContent = messages.findLast((m: any) => m.role === 'user')?.content || "";
           anthropicMessages[anthropicMessages.length - 1] = { role: "user", content: [ { type: "text", text: `File contents of ${fileName}:\n\n${textContent}` }, { type: "text", text: lastUserContent } ] };
         } else if (mediaType.startsWith("image/")) {
-          const lastUserContent = messages.findLast((m: any) => m.role === 'user')?.content || "";
           anthropicMessages[anthropicMessages.length - 1] = { role: "user", content: [ { type: "image", source: { type: "base64", media_type: mediaType, data: base64, } }, { type: "text", text: lastUserContent } ] };
         }
       } catch (error) {
@@ -119,10 +115,9 @@ export async function POST(req: NextRequest) {
         model,
         max_tokens: 4096,
         temperature: 0.7,
-        tools: tools, // Pass the defined tools array
-        tool_choice: { type: "auto" }, // Keep tool_choice
+        tools: tools,
+        tool_choice: { type: "auto" },
         messages: anthropicMessages,
-        // Ensure your full system prompt is here
         system: `You are a financial data visualization expert. Your role is to analyze financial data and create clear, meaningful visualizations using generate_graph_data tool:
 
 Here are the chart types available and their ideal use cases:
@@ -235,96 +230,74 @@ Focus on clear financial insights and let the visualization enhance understandin
 
     console.log("✅ Anthropic API Response received (Auth Skipped)");
 
-    // Process response logic starts here
-    const toolUseContent = response.content.find((c: any) => c.type === "tool_use");
-    const textContent = response.content.find((c: any) => c.type === "text");
+    // --- Process response ---
+    // Find tool use block (type is inferred or use 'as Anthropic.ToolUseBlock | undefined')
+    const toolUseContent = response.content.find((c) => c.type === "tool_use");
 
-    // ---> Corrected processToolResponse function <---
+    // ---> Correctly find and type the text block <---
+    const textBlock = response.content.find((c): c is Anthropic.TextBlock => c.type === "text");
+
+    // ---> processToolResponse function (with reduce fixed) <---
     const processToolResponse = (toolUseContent: any): ChartData | null => {
-      // Check if toolUseContent and its input exist
       if (!toolUseContent || !toolUseContent.input) {
         console.warn("processToolResponse called without valid toolUseContent or input.");
         return null;
       }
-
       const chartData = toolUseContent.input as ChartToolResponse;
-
-      // Validate essential parts of the chart data structure
       if ( !chartData || typeof chartData !== 'object' || !chartData.chartType || !chartData.data || !Array.isArray(chartData.data) || !chartData.chartConfig || typeof chartData.chartConfig !== 'object' || !chartData.config || typeof chartData.config !== 'object' ) {
         console.error("Invalid chart data structure received from tool:", JSON.stringify(chartData, null, 2));
-        // Returning null instead of throwing, so the text response can still be shown
         return null;
-        // Optionally: throw new Error("Invalid chart data structure received from AI tool.");
       }
-
-      let processedData = [...chartData.data]; // Create a copy to modify if needed
-
-      // Transform data for pie charts if necessary
+      let processedData = [...chartData.data];
       if (chartData.chartType === "pie") {
         const segmentKey = chartData.config.xAxisKey || "segment";
         const valueKeys = Object.keys(chartData.chartConfig);
-        const primaryValueKey = valueKeys.length > 0 ? valueKeys[0] : 'value'; // Use first key or default to 'value'
-
-        processedData = chartData.data.map((item) => {
-          return {
-            segment: item[segmentKey] || item.segment || item.category || item.name || 'Unknown',
-            value: item[primaryValueKey] || item.value || 0,
-          };
-        }).filter(item => item.segment !== 'Unknown' && typeof item.value === 'number');
-
-        // Ensure xAxisKey is set correctly for pie charts in the config
+        const primaryValueKey = valueKeys.length > 0 ? valueKeys[0] : 'value';
+        processedData = chartData.data.map((item) => ({
+          segment: item[segmentKey] || item.segment || item.category || item.name || 'Unknown',
+          value: item[primaryValueKey] || item.value || 0,
+        })).filter(item => item.segment !== 'Unknown' && typeof item.value === 'number');
         chartData.config.xAxisKey = "segment";
-        // Optionally ensure totalLabel exists if needed by pie chart component
         if (!chartData.config.totalLabel) chartData.config.totalLabel = "Total";
       }
-
-      // --- This is the previously missing reduce logic ---
-      // Create new chartConfig with added color properties
       const processedChartConfig = Object.entries(chartData.chartConfig).reduce<ChartConfig>(
         (acc, [key, configValue], index) => {
-          // Make sure configValue is a valid object, provide default if not
-          const currentConfig = typeof configValue === 'object' && configValue !== null
-             ? configValue
-             : { label: key }; // Use key as label if config is missing/invalid
-
+          const currentConfig = typeof configValue === 'object' && configValue !== null ? configValue : { label: key };
           acc[key] = {
-             ...(currentConfig as object), // Spread the existing config properties (asserting it's an object now)
-             label: currentConfig.label || key, // Ensure label exists
-             // Assign color variables sequentially, cycling through 5 colors
+             ...(currentConfig as object),
+             label: currentConfig.label || key,
              color: `hsl(var(--chart-${(index % 5) + 1}))`,
           };
           return acc;
         },
-        {} // Initial value for the accumulator (empty object)
+        {}
       );
-      // --- End of restored reduce logic ---
-
-      // Return the fully processed chart data object
       return {
-        ...chartData, // Spread original data
-        data: processedData, // Use potentially modified data (for pie chart)
-        chartConfig: processedChartConfig, // Use the config with added colors
+        ...chartData,
+        data: processedData,
+        chartConfig: processedChartConfig,
       };
     };
-    // ---> End of corrected function <---
+    // ---> End of processToolResponse function <---
 
     const processedChartData = toolUseContent ? processToolResponse(toolUseContent) : null;
 
-    // Log if processing failed after tool use
     if (toolUseContent && !processedChartData) {
         console.warn("Tool use detected but chart data processing failed. Returning text only.");
     }
 
-    // Return successful response
+    // ---> Return successful response using correctly typed textBlock <---
     return new NextResponse(
       JSON.stringify({
-        content: textContent?.text || (processedChartData ? "Generated a chart." : ""), // Provide default text if chart exists but text doesn't
+        // Access .text safely using the typed variable
+        content: textBlock?.text || (processedChartData ? "Generated a chart." : ""),
         hasToolUse: !!toolUseContent,
-        // toolUse: toolUseContent, // Decide if client needs raw toolUse block
-        chartData: processedChartData, // Send processed (or null) data
+        // toolUse: toolUseContent, // Keep commented out unless needed by client
+        chartData: processedChartData,
       }),
       { headers: { "Content-Type": "application/json", "Cache-Control": "no-cache", }, }
     );
+    // ---> End of successful response <---
 
   } catch (error) {
      console.error(`❌ Finance API Error (Auth Skipped)`, error);
